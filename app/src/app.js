@@ -13,6 +13,9 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev')); // logging
 }
 
+// Serve static frontend
+app.use(express.static(require('path').join(__dirname, 'public')));
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
