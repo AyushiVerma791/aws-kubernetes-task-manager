@@ -85,3 +85,19 @@ aws-kubernetes-task-manager
 │
 └── README.md
 ```
+
+## Results & Proof of Concept
+
+The infrastructure was successfully provisioned on AWS and subjected to load testing to verify auto-scaling capabilities. Below are the actual screenshots demonstrating the active cluster, the provisioned EC2 worker nodes, and the successful automatic scaling from 1 to 3 replicas under simulated high traffic.
+
+### EKS Cluster Provisioning
+![AWS EKS Cluster](docs/eks-cluster.png)
+*The Amazon EKS cluster actively running the Kubernetes Control Plane with zero health issues.*
+
+### EC2 Worker Nodes
+![AWS EKS Nodes](docs/eks-nodes.png)
+*Two managed t3.small EC2 instances successfully attached to the EKS cluster and ready to serve traffic.*
+
+### Horizontal Pod Autoscaling (HPA) in Action
+![Kubernetes HPA Scaling](docs/hpa-scaling.png)
+*Real-time terminal output showing the Kubernetes HPA automatically scaling the application from 1 to 3 replicas as CPU load spiked over 200% during the load test.*
