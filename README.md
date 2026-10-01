@@ -99,5 +99,5 @@ The infrastructure was successfully provisioned on AWS and subjected to load tes
 *Two managed t3.small EC2 instances successfully attached to the EKS cluster and ready to serve traffic.*
 
 ### Horizontal Pod Autoscaling (HPA) in Action
-![Kubernetes HPA Scaling](docs/hpa-scaling.png)
+![Kubernetes HPA Scaling](docs/hpa-scaling-clean.png)
 *Real-time terminal output showing the Kubernetes HPA automatically scaling the application from 1 to 3 replicas as CPU load spiked over 200% during the load test.*
