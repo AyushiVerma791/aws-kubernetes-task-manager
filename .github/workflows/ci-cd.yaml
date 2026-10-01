@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write # Required for AWS OIDC authentication
+  contents: read
+
 jobs:
   build-and-test:
     name: Build & Test
@@ -19,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
 
@@ -44,11 +48,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # e.g. arn:aws:iam::1234567890:role/github-actions-role
           aws-region: ap-south-1
 
       - name: Login to Amazon ECR
@@ -75,18 +78,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
       - name: Update KubeConfig
         run: aws eks update-kubeconfig --name cloudscale-cluster --region ap-south-1
 
       - name: Deploy to Kubernetes
+        env:
+          ECR_REGISTRY: 402349693545.dkr.ecr.ap-south-1.amazonaws.com
+          ECR_REPOSITORY: cloudscale-api
+          IMAGE_TAG: ${{ github.sha }}
+        working-directory: ./k8s/base
         run: |
-          # Update the deployment file with the new Docker image tag
-          sed -i "s|latest|${{ github.sha }}|g" k8s/base/deployment.yaml
-          kubectl apply -k k8s/base/
+          # Use kustomize to set the new image tag dynamically
+          kustomize edit set image $ECR_REGISTRY/$ECR_REPOSITORY:latest=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+          # Apply manifests (including the pre-install Prisma migration Job)
+          kubectl apply -k .
+
+          # Wait for the rolling update to complete successfully
+          kubectl rollout status deployment/cloudscale-api --timeout=5m

@@ -3,12 +3,15 @@ const cors = require('cors');
 const morgan = require('morgan');
 const taskRoutes = require('./routes/tasks.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/error.middleware');
+const prisma = require('./database/db');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev')); // logging
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev')); // logging
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -18,10 +21,7 @@ app.get('/health', (req, res) => {
 // Readiness check endpoint
 app.get('/ready', async (req, res) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
     await prisma.$queryRaw`SELECT 1`;
-    await prisma.$disconnect();
     res.status(200).json({ status: 'ready', database: 'connected' });
   } catch (error) {
     res.status(503).json({ status: 'not ready', database: 'disconnected', error: error.message });

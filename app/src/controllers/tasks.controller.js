@@ -1,10 +1,25 @@
 const prisma = require('../database/db');
 
+// Helper to safely parse IDs
+const parseId = (idStr) => {
+  const id = parseInt(idStr, 10);
+  if (isNaN(id)) {
+    const err = new Error('Invalid task ID format');
+    err.statusCode = 400;
+    throw err;
+  }
+  return id;
+};
+
 // GET /tasks
 const getTasks = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    let page = parseInt(req.query.page) || 1;
+    if (page < 1) page = 1;
+    let limit = parseInt(req.query.limit) || 10;
+    if (limit < 1) limit = 10;
+    if (limit > 100) limit = 100;
+    
     const skip = (page - 1) * limit;
 
     const [tasks, total] = await Promise.all([
@@ -33,9 +48,9 @@ const getTasks = async (req, res, next) => {
 // GET /tasks/:id
 const getTaskById = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = parseId(req.params.id);
     const task = await prisma.task.findUnique({
-      where: { id: parseInt(id) }
+      where: { id }
     });
 
     if (!task) {
@@ -55,14 +70,14 @@ const createTask = async (req, res, next) => {
   try {
     const { title, description } = req.body;
     
-    if (!title) {
-      const err = new Error('Title is required');
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      const err = new Error('Title is required and cannot be empty');
       err.statusCode = 400;
       throw err;
     }
 
     const task = await prisma.task.create({
-      data: { title, description }
+      data: { title: title.trim(), description }
     });
 
     res.status(201).json(task);
@@ -74,8 +89,14 @@ const createTask = async (req, res, next) => {
 // PATCH /tasks/:id
 const updateTask = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = parseId(req.params.id);
     const { title, description, status } = req.body;
+
+    if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
+      const err = new Error('Title cannot be empty');
+      err.statusCode = 400;
+      throw err;
+    }
 
     // Validate status if provided
     if (status && !['pending', 'in_progress', 'completed'].includes(status)) {
@@ -85,8 +106,12 @@ const updateTask = async (req, res, next) => {
     }
 
     const task = await prisma.task.update({
-      where: { id: parseInt(id) },
-      data: { title, description, status }
+      where: { id },
+      data: { 
+        ...(title && { title: title.trim() }), 
+        description, 
+        status 
+      }
     });
 
     res.json(task);
@@ -103,10 +128,10 @@ const updateTask = async (req, res, next) => {
 // DELETE /tasks/:id
 const deleteTask = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = parseId(req.params.id);
 
     await prisma.task.delete({
-      where: { id: parseInt(id) }
+      where: { id }
     });
 
     res.status(204).send();

@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prisma-migration
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      containers:
+      - name: migration
+        image: 402349693545.dkr.ecr.ap-south-1.amazonaws.com/cloudscale-api:latest
+        command: ["npx", "prisma", "migrate", "deploy"]
+        envFrom:
+        - configMapRef:
+            name: cloudscale-config
+        - secretRef:
+            name: cloudscale-secrets
+      restartPolicy: Never
