@@ -1,0 +1,4 @@
+﻿node_modules/
+.env
+bin/
+k8s/prod-config.yaml

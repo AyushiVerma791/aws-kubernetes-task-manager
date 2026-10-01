@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudscale-api
+  labels:
+    app: cloudscale-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudscale-api
+  template:
+    metadata:
+      labels:
+        app: cloudscale-api
+    spec:
+      containers:
+      - name: cloudscale-api
+        image: 402349693545.dkr.ecr.ap-south-1.amazonaws.com/cloudscale-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: cloudscale-secrets
+        - configMapRef:
+            name: cloudscale-config
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
